@@ -335,5 +335,7 @@ class XMLRPCSystem(Component):
         version number, third is the minor. Changes to the major version
         indicate API breaking changes, while minor version changes are simple
         additions, bug fixes, etc. """
+        import re
         import tracrpc
-        return map(int, tracrpc.__version__.split('-')[0].split('.'))
+        match = re.match(r'([0-9]+)\.([0-9]+)\.([0-9]+)', tracrpc.__version__)
+        return map(int, match.groups())
