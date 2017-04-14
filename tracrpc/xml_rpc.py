@@ -111,8 +111,9 @@ class XmlRpcProtocol(Component):
     def parse_rpc_request(self, req, content_type):
         """ Parse XML-RPC requests."""
         try:
-            args, method = xmlrpclib.loads(
-                        req.read(int(req.get_header('Content-Length'))))
+            request = req.read(int(req.get_header('Content-Length')))
+            self.log.debug("RPC(xml) request: %s" % (repr(request)))
+            args, method = xmlrpclib.loads(request)
         except Exception, e:
             self.log.debug("RPC(xml) parse error: %s", to_unicode(e))
             raise ProtocolException(xmlrpclib.Fault(-32700, to_unicode(e)))
@@ -175,6 +176,7 @@ class XmlRpcProtocol(Component):
         req.send_header('Content-Length', len(response))
         req.end_headers()
         req.write(response)
+        self.log.debug("RPC(xml) response: %s" % (repr(response)))
         raise RequestDone
 
     def _normalize_xml_input(self, args):
@@ -186,6 +188,11 @@ class XmlRpcProtocol(Component):
         new_args = []
         for arg in args:
             # self.env.log.debug("arg %s, type %s" % (arg, type(arg)))
+            if isinstance(arg, basestring):
+                if arg == 'false':
+                    arg = '0'
+                elif arg == 'true':
+                    arg = '1'
             if isinstance(arg, xmlrpclib.DateTime):
                 new_args.append(from_xmlrpc_datetime(arg))
             elif isinstance(arg, xmlrpclib.Binary):

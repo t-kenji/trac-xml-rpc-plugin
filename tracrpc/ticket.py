@@ -151,10 +151,23 @@ class TicketRPC(Component):
 
     def get(self, req, id):
         """ Fetch a ticket. Returns [id, time_created, time_changed, attributes]. """
+        self.log.debug("RPC(xml) Fetch ticket with ID %s", id)
         t = model.Ticket(self.env, id)
         req.perm(t.resource).require('TICKET_VIEW')
         t['_ts'] = str(to_utimestamp(t.time_changed))
-        return (t.id, t.time_created, t.time_changed, t.values)
+        ts = TicketSystem(self.env)
+        all_fields = {}
+        for field in ts.get_ticket_fields():
+            all_fields[field['name']] = field['type']
+        self.log.debug("RPC(xml) ticket fields: %s" % (repr(all_fields)))
+        field_values = t.values
+        for k, v in field_values.iteritems():
+            if k in all_fields and all_fields[k] == 'checkbox':
+                if v == '0' or v == 0:
+                    field_values[k] = False
+                else:
+                    field_values[k] = True
+        return (t.id, t.time_created, t.time_changed, field_values)
 
     def create(self, req, summary, description, attributes={}, notify=False, when=None):
         """ Create a new ticket, returning the ticket ID.
